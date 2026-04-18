@@ -1,26 +1,110 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-primary: #3B82F6;
+  --color-primary-dark: #2563EB;
+  --color-primary-light: #DBEAFE;
+  --color-accent: #6366F1;
+  --color-bg: #F8FAFF;
+  --color-card: #FFFFFF;
+  --color-text: #1E293B;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-admin-bg: #0F172A;
+  --color-admin-surface: #1E293B;
+  --color-admin-border: #334155;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #F8FAFF;
+  color: #1E293B;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.video-wrapper {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.otp-input {
+  width: 3rem;
+  height: 3.5rem;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  border: 2px solid #E2E8F0;
+  border-radius: 0.75rem;
+  background: #FFFFFF;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+  color: #1E293B;
+}
+
+.otp-input:focus {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease forwards;
+}
+
+/* Step transitions — directional slide */
+@keyframes stepEnterForward {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes stepEnterBack {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-step-forward {
+  animation: stepEnterForward 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.animate-step-back {
+  animation: stepEnterBack 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes fadeScaleIn {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
 }

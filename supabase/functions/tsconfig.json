@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "types": ["https://esm.sh/v135/@types/node@20.11.5/index.d.ts"]
+  },
+  "include": ["./**/*.ts"]
+}
