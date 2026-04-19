@@ -4,8 +4,16 @@ import { getSessionProfile } from '@/lib/auth/session'
 
 export const runtime = 'nodejs'
 
+const ALLOWED_EVENTS = new Set([
+  'stream_access',
+  'seek_abuse',
+  'tab_hidden',
+  'playback_started',
+  'playback_completed',
+  'multiple_sessions_detected',
+])
+
 export async function POST(req: NextRequest) {
-  // Must be authenticated — no logging for unauthenticated requests
   const profile = await getSessionProfile()
   if (!profile) {
     return NextResponse.json({ ok: false }, { status: 401 })
@@ -25,13 +33,6 @@ export async function POST(req: NextRequest) {
   if (!event_type || typeof event_type !== 'string') {
     return NextResponse.json({ ok: false }, { status: 400 })
   }
-
-  // Allowlist event types so the endpoint cannot be abused as a generic logger
-  const ALLOWED_EVENTS = new Set([
-    'seek_abuse',
-    'tab_hidden',
-    'stream_access',
-  ])
   if (!ALLOWED_EVENTS.has(event_type)) {
     return NextResponse.json({ ok: false }, { status: 400 })
   }
@@ -46,7 +47,11 @@ export async function POST(req: NextRequest) {
       user_id:    profile.id,
       lesson_id,
       event_type,
-      metadata,
+      metadata: {
+        ...metadata,
+        ip: req.headers.get('x-forwarded-for') ?? 'unknown',
+        ua: (req.headers.get('user-agent') ?? '').slice(0, 200),
+      },
     })
   } catch {
     // Return 200 even on DB failure — client should never retry telemetry

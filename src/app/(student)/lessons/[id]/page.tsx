@@ -37,19 +37,31 @@ export default async function LessonPage({
   ])
 
   const streamUrl  = `/api/lesson-stream/${lesson.id}`
-  const hasVideo   = !!lesson.video_url
+  const hasVideo   = !!lesson.video_url || !!lesson.hls_url
 
-  // Watermark: name · masked phone · access date+time
-  // Built server-side so it reflects the exact moment of access.
+  // Watermark: name · masked phone · date · time · session fingerprint
+  // Built server-side — fingerprint is hash(user_id + date) so each day is unique
+  // and forensically traceable without exposing the real session token.
   const accessTime  = new Date()
   const maskedPhone = profile.phone
     ? `+222••••${profile.phone.slice(-4)}`
     : ''
+
+  const fingerprintRaw = new TextEncoder().encode(
+    profile.id + accessTime.toISOString().slice(0, 10)
+  )
+  const fingerprintBuf = await crypto.subtle.digest('SHA-256', fingerprintRaw)
+  const sessionHint = Array.from(new Uint8Array(fingerprintBuf))
+    .slice(0, 3)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+
   const watermarkText = [
     profile.full_name ?? 'Étudiant',
     maskedPhone,
     accessTime.toLocaleDateString('fr-FR'),
     accessTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    `#${sessionHint}`,
   ].filter(Boolean).join(' · ')
 
   return (
