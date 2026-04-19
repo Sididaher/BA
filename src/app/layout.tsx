@@ -17,12 +17,16 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "BA",
-  description: "Plateforme de préparation au Baccalauréat",
+  title:           "BA",
+  applicationName: "BA",
+  description:     "Plateforme de préparation au Baccalauréat",
   appleWebApp: {
-    capable:         true,
-    title:           'BA',
-    statusBarStyle:  'default',
+    capable:        true,
+    title:          'BA',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    apple: '/apple-icon',
   },
 };
 
@@ -36,6 +40,14 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Hard fallback for iOS Safari — do not remove */}
+        <link rel="apple-touch-icon" href="/apple-icon" />
+        <meta name="apple-mobile-web-app-title" content="BA" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="BA" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

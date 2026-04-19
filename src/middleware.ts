@@ -6,8 +6,17 @@ const PUBLIC_PATHS = new Set(['/', '/login', '/verify-otp', '/register'])
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Never intercept API routes or internal Next.js paths.
-  if (pathname.startsWith('/api/')) return NextResponse.next()
+  // Never intercept API routes, internal Next.js paths, or public asset routes.
+  // Icon/manifest routes must be publicly accessible — iOS fetches them before any session exists.
+  if (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/icon') ||
+    pathname.startsWith('/icons/') ||
+    pathname === '/apple-icon' ||
+    pathname === '/manifest.webmanifest'
+  ) {
+    return NextResponse.next()
+  }
 
   const hasSession = !!request.cookies.get(SESSION_COOKIE)?.value
 

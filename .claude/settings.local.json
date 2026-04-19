@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\('GraduationCap:', !!l.GraduationCapIcon, 'Timer:', !!l.TimerIcon, 'TrendingUp:', !!l.TrendingUpIcon, 'Calendar:', !!l.CalendarIcon\\)\")",
+      "Bash(git remote *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git -C /c/Users/hp/Desktop/bac-english add src/app/icon.tsx src/app/apple-icon.tsx src/app/manifest.ts src/app/layout.tsx src/lib/auth/session.ts src/app/api/auth/set-session/route.ts src/app/api/auth/logout/route.ts src/app/api/lesson-stream/[id]/route.ts src/components/auth/AuthAlert.tsx)",
+      "Bash(git -C /c/Users/hp/Desktop/bac-english status --short)",
+      "Bash(git -C /c/Users/hp/Desktop/bac-english commit -m ' *)",
+      "Bash(git -C /c/Users/hp/Desktop/bac-english push origin master)"
+    ]
+  }
+}
