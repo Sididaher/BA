@@ -33,7 +33,12 @@ export interface Lesson {
   course_id: string
   title: string
   description: string | null
+  // Legacy URL field — kept for backward compatibility
   video_url: string | null
+  // Storage-based delivery (preferred)
+  video_bucket: string | null
+  video_path:   string | null
+  video_type:   'storage' | 'youtube' | 'vimeo' | 'direct' | null
   duration: number
   order_index: number
   is_downloadable: boolean

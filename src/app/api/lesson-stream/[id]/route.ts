@@ -4,8 +4,23 @@ import { getSessionProfile } from '@/lib/auth/session'
 
 export const runtime = 'nodejs'
 
-const SIGNED_URL_TTL = 3600 // 1 hour
+// 300 seconds — enough to buffer a few minutes, short enough to be useless if leaked
+const SIGNED_URL_TTL = 300
 
+function getServiceClient() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!key) return null
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    key,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
+}
+
+/**
+ * Parses a full Supabase Storage object URL into { bucket, path }.
+ * Used for legacy lessons that still store the raw storage URL in video_url.
+ */
 function parseStorageUrl(url: string): { bucket: string; path: string } | null {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!base) return null
@@ -23,23 +38,13 @@ function parseStorageUrl(url: string): { bucket: string; path: string } | null {
   }
 }
 
-function getServiceClient() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!key) return null
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    key,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  )
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
 
-  // ── 1. Validate custom session ───────────────────────────────────────────
+  // ── 1. Authenticate ───────────────────────────────────────────────────────
   const profile = await getSessionProfile()
   if (!profile) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
@@ -48,26 +53,39 @@ export async function GET(
     return NextResponse.json({ error: 'Compte inactif' }, { status: 403 })
   }
 
-  // ── 1b. Log stream access (fire-and-forget — never blocks the response) ──
-  void logStreamAccess(id, profile.id, profile.role, request)
-
-  // ── 2. Fetch lesson ───────────────────────────────────────────────────────
   const svc = getServiceClient()
   if (!svc) {
     return NextResponse.json({ error: 'Service non configuré' }, { status: 500 })
   }
 
+  // ── 2. Log stream access (fire-and-forget) ────────────────────────────────
+  void logStreamAccess(id, profile.id, profile.role, request)
+
+  // ── 3. Fetch lesson with storage fields ───────────────────────────────────
   const { data: lesson } = await svc
     .from('lessons')
-    .select('id, video_url, is_protected, is_downloadable, course:courses!inner(id, is_published)')
+    .select(`
+      id,
+      video_url,
+      video_bucket,
+      video_path,
+      video_type,
+      is_protected,
+      is_downloadable,
+      course:courses!inner(id, is_published)
+    `)
     .eq('id', id)
     .single()
 
-  if (!lesson || !lesson.video_url) {
+  // Lesson must exist and have some video source
+  const hasStorageVideo = !!(lesson?.video_bucket && lesson?.video_path)
+  const hasLegacyVideo  = !!lesson?.video_url
+
+  if (!lesson || (!hasStorageVideo && !hasLegacyVideo)) {
     return NextResponse.json({ error: 'Leçon introuvable' }, { status: 404 })
   }
 
-  // ── 3. Check course published (admins bypass) ─────────────────────────────
+  // ── 4. Check course published (admins bypass) ─────────────────────────────
   const courseRaw = (lesson as unknown as {
     course: { id: string; is_published: boolean } | { id: string; is_published: boolean }[]
   }).course
@@ -76,9 +94,28 @@ export async function GET(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
-  const rawUrl = lesson.video_url
+  // ── 5. Generate signed URL — storage fields take priority ─────────────────
 
-  // ── 4. Protected lesson → signed URL ──────────────────────────────────────
+  // PATH A: new-style storage (video_bucket + video_path)
+  if (hasStorageVideo) {
+    const { data: signed, error } = await svc.storage
+      .from(lesson.video_bucket as string)
+      .createSignedUrl(lesson.video_path as string, SIGNED_URL_TTL)
+
+    if (error || !signed?.signedUrl) {
+      console.error('[lesson-stream] Failed to sign storage URL:', error?.message)
+      return NextResponse.json(
+        { error: 'Impossible de générer le lien sécurisé' },
+        { status: 502 },
+      )
+    }
+    return buildRedirect(signed.signedUrl)
+  }
+
+  // PATH B: legacy video_url
+  const rawUrl = lesson.video_url as string
+
+  // B1: Protected + Supabase Storage URL → sign it (old migration path)
   if (lesson.is_protected) {
     const storageInfo = parseStorageUrl(rawUrl)
     if (storageInfo) {
@@ -87,15 +124,19 @@ export async function GET(
         .createSignedUrl(storageInfo.path, SIGNED_URL_TTL)
 
       if (error || !signed?.signedUrl) {
-        console.error('[lesson-stream] Failed to sign URL:', error?.message)
-        return NextResponse.json({ error: 'Impossible de générer le lien sécurisé' }, { status: 502 })
+        console.error('[lesson-stream] Failed to sign legacy URL:', error?.message)
+        return NextResponse.json(
+          { error: 'Impossible de générer le lien sécurisé' },
+          { status: 502 },
+        )
       }
       return buildRedirect(signed.signedUrl)
     }
+    // Protected but non-storage URL (YouTube/Vimeo embed redirect)
     return buildRedirect(rawUrl)
   }
 
-  // ── 5. Non-protected lesson ───────────────────────────────────────────────
+  // B2: Non-protected legacy URL — pass through
   return buildRedirect(rawUrl)
 }
 

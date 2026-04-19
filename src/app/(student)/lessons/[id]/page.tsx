@@ -36,8 +36,19 @@ export default async function LessonPage({
       .maybeSingle(),
   ])
 
-  const streamUrl  = `/api/lesson-stream/${lesson.id}`
-  const hasVideo   = !!lesson.video_url
+  const streamUrl = `/api/lesson-stream/${lesson.id}`
+  const hasVideo  = !!(lesson.video_url || (lesson.video_bucket && lesson.video_path))
+
+  // rawVideoUrl is used by VideoPlayer only to classify the source type
+  // (youtube / vimeo / direct) so it knows whether to render <iframe> or <video>.
+  // For storage-based lessons, we pass a synthetic Supabase Storage path so it
+  // classifies as 'direct' — the actual <video src> is always streamUrl.
+  const rawVideoUrl: string = (() => {
+    if (lesson.video_bucket && lesson.video_path) {
+      return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${lesson.video_bucket}/${lesson.video_path}`
+    }
+    return lesson.video_url ?? ''
+  })()
 
   // Watermark: name · masked phone · access date+time
   // Built server-side so it reflects the exact moment of access.
@@ -77,7 +88,7 @@ export default async function LessonPage({
           {hasVideo ? (
             <VideoPlayer
               streamUrl={streamUrl}
-              rawVideoUrl={lesson.video_url!}
+              rawVideoUrl={rawVideoUrl}
               lessonId={lesson.id}
               isProtected={lesson.is_protected}
               watermarkText={watermarkText}
