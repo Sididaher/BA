@@ -17,7 +17,10 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title:           "BA",
+  title: {
+    default:  'BA',
+    template: '%s | BA',
+  },
   applicationName: "BA",
   description:     "Plateforme de préparation au Baccalauréat",
   appleWebApp: {
