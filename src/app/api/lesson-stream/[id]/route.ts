@@ -4,12 +4,7 @@ import { getSessionProfile } from '@/lib/auth/session'
 
 export const runtime = 'nodejs'
 
-// Signed URL lives 90 seconds — long enough to buffer, short enough to be useless if leaked
-const SIGNED_URL_TTL = 90
-
-// Max stream_access events per user in 60 seconds before flagging as suspicious
-const RAPID_ACCESS_WINDOW_MS  = 60_000
-const RAPID_ACCESS_THRESHOLD  = 8
+const SIGNED_URL_TTL = 3600 // 1 hour
 
 function parseStorageUrl(url: string): { bucket: string; path: string } | null {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -44,7 +39,7 @@ export async function GET(
 ) {
   const { id } = await params
 
-  // ── 1. Authenticate ───────────────────────────────────────────────────────
+  // ── 1. Validate custom session ───────────────────────────────────────────
   const profile = await getSessionProfile()
   if (!profile) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
@@ -53,46 +48,26 @@ export async function GET(
     return NextResponse.json({ error: 'Compte inactif' }, { status: 403 })
   }
 
-  // ── 2. Subscription gate (students only — admins bypass) ──────────────────
-  if (profile.role === 'student') {
-    if (profile.is_flagged) {
-      return NextResponse.json({ error: 'Accès restreint suite à une activité suspecte' }, { status: 403 })
-    }
-    if (profile.subscription_status !== 'active') {
-      return NextResponse.json({ error: 'Abonnement requis pour accéder aux vidéos' }, { status: 403 })
-    }
-    if (
-      profile.subscription_expires_at &&
-      new Date(profile.subscription_expires_at) <= new Date()
-    ) {
-      return NextResponse.json({ error: 'Abonnement expiré' }, { status: 403 })
-    }
-  }
+  // ── 1b. Log stream access (fire-and-forget — never blocks the response) ──
+  void logStreamAccess(id, profile.id, profile.role, request)
 
+  // ── 2. Fetch lesson ───────────────────────────────────────────────────────
   const svc = getServiceClient()
   if (!svc) {
     return NextResponse.json({ error: 'Service non configuré' }, { status: 500 })
   }
 
-  // ── 3. Rapid-access / multiple-session detection ──────────────────────────
-  //    Fire-and-forget — never blocks the response
-  void detectRapidAccess(id, profile.id, svc)
-
-  // ── 4. Log stream access ──────────────────────────────────────────────────
-  void logStreamAccess(id, profile.id, profile.role, request)
-
-  // ── 5. Fetch lesson ───────────────────────────────────────────────────────
   const { data: lesson } = await svc
     .from('lessons')
-    .select('id, video_url, hls_url, is_protected, is_downloadable, course:courses!inner(id, is_published)')
+    .select('id, video_url, is_protected, is_downloadable, course:courses!inner(id, is_published)')
     .eq('id', id)
     .single()
 
-  if (!lesson || (!lesson.video_url && !lesson.hls_url)) {
+  if (!lesson || !lesson.video_url) {
     return NextResponse.json({ error: 'Leçon introuvable' }, { status: 404 })
   }
 
-  // ── 6. Check course published (admins bypass) ─────────────────────────────
+  // ── 3. Check course published (admins bypass) ─────────────────────────────
   const courseRaw = (lesson as unknown as {
     course: { id: string; is_published: boolean } | { id: string; is_published: boolean }[]
   }).course
@@ -101,11 +76,11 @@ export async function GET(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
-  // ── 7. Prefer HLS → then signed storage URL → then raw URL ───────────────
-  const targetUrl = (lesson.hls_url ?? lesson.video_url) as string
+  const rawUrl = lesson.video_url
 
+  // ── 4. Protected lesson → signed URL ──────────────────────────────────────
   if (lesson.is_protected) {
-    const storageInfo = parseStorageUrl(targetUrl)
+    const storageInfo = parseStorageUrl(rawUrl)
     if (storageInfo) {
       const { data: signed, error } = await svc.storage
         .from(storageInfo.bucket)
@@ -117,10 +92,11 @@ export async function GET(
       }
       return buildRedirect(signed.signedUrl)
     }
-    return buildRedirect(targetUrl)
+    return buildRedirect(rawUrl)
   }
 
-  return buildRedirect(targetUrl)
+  // ── 5. Non-protected lesson ───────────────────────────────────────────────
+  return buildRedirect(rawUrl)
 }
 
 function buildRedirect(url: string): NextResponse {
@@ -156,33 +132,5 @@ async function logStreamAccess(
     })
   } catch {
     // Never fail the stream over a logging error
-  }
-}
-
-async function detectRapidAccess(
-  lessonId: string,
-  userId:   string,
-  svc:      ReturnType<typeof getServiceClient>,
-) {
-  try {
-    if (!svc) return
-    const since = new Date(Date.now() - RAPID_ACCESS_WINDOW_MS).toISOString()
-    const { count } = await svc
-      .from('video_events')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('event_type', 'stream_access')
-      .gte('created_at', since)
-
-    if ((count ?? 0) >= RAPID_ACCESS_THRESHOLD) {
-      await svc.from('video_events').insert({
-        user_id:    userId,
-        lesson_id:  lessonId,
-        event_type: 'multiple_sessions_detected',
-        metadata:   { recent_access_count: count, window_ms: RAPID_ACCESS_WINDOW_MS },
-      })
-    }
-  } catch {
-    // Never fail the stream over detection logic
   }
 }

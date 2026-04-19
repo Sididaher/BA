@@ -139,23 +139,12 @@ export default function VideoPlayer({
     urlType === 'youtube' ? toYoutubeEmbedUrl(rawVideoUrl) :
     urlType === 'vimeo'   ? toVimeoEmbedUrl(rawVideoUrl)   :
     null
-  // HLS and direct both play via the HTML5 <video> element through the stream route
-  const isNativeVideo = urlType === 'direct' || urlType === 'hls'
 
-  // ── Progress tracking + playback telemetry (native video only) ──────────────
+  // ── Progress tracking (direct HTML5 video only) ───────────────────────────
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !isNativeVideo) return
+    if (!video || urlType !== 'direct') return
     setLoadError(false)
-
-    let startedReported = false
-
-    function onPlay() {
-      if (!startedReported) {
-        startedReported = true
-        reportEvent(lessonId, 'playback_started', { currentTime: video!.currentTime })
-      }
-    }
 
     const interval = setInterval(() => {
       if (!video.paused && video.currentTime > 0) {
@@ -163,24 +152,18 @@ export default function VideoPlayer({
       }
     }, 10_000)
 
-    function onEnded() {
-      markLessonCompleted(lessonId)
-      reportEvent(lessonId, 'playback_completed', { duration: video!.duration })
-    }
-
-    video.addEventListener('play', onPlay)
+    function onEnded() { markLessonCompleted(lessonId) }
     video.addEventListener('ended', onEnded)
 
     return () => {
       clearInterval(interval)
-      video.removeEventListener('play', onPlay)
       video.removeEventListener('ended', onEnded)
     }
-  }, [lessonId, streamUrl, isNativeVideo])
+  }, [lessonId, streamUrl, urlType])
 
   // ── Tab-visibility logging ────────────────────────────────────────────────
   useEffect(() => {
-    if (!isNativeVideo) return
+    if (urlType !== 'direct') return
     function onVisibility() {
       if (document.hidden) {
         reportEvent(lessonId, 'tab_hidden', {
@@ -190,7 +173,7 @@ export default function VideoPlayer({
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [lessonId, isNativeVideo])
+  }, [lessonId, urlType])
 
   // ── Seek-abuse detection ──────────────────────────────────────────────────
   const handleSeeked = useCallback(() => {

@@ -16,7 +16,6 @@ export interface SuspiciousStudent {
   user_id: string
   full_name: string | null
   phone: string | null
-  is_flagged: boolean
   seek_abuse_count: number
   tab_hidden_count: number
   total: number
@@ -99,19 +98,18 @@ export async function getSuspiciousStudents(): Promise<SuspiciousStudent[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('video_events')
-    .select('user_id, event_type, profile:profiles!user_id(full_name, phone, is_flagged)')
+    .select('user_id, event_type, profile:profiles!user_id(full_name, phone)')
     .in('event_type', ['seek_abuse', 'tab_hidden'])
 
   if (!data) return []
 
   const map = new Map<string, SuspiciousStudent>()
-  for (const row of data as unknown as { user_id: string; event_type: string; profile: { full_name: string | null; phone: string | null; is_flagged: boolean } | null }[]) {
+  for (const row of data as unknown as { user_id: string; event_type: string; profile: { full_name: string | null; phone: string | null } | null }[]) {
     if (!map.has(row.user_id)) {
       map.set(row.user_id, {
         user_id: row.user_id,
         full_name: row.profile?.full_name ?? null,
         phone: row.profile?.phone ?? null,
-        is_flagged: row.profile?.is_flagged ?? false,
         seek_abuse_count: 0,
         tab_hidden_count: 0,
         total: 0,

@@ -9,7 +9,6 @@ import {
   ShieldAlertIcon, EyeIcon, SkipForwardIcon, EyeOffIcon,
   CalendarIcon, UsersIcon, ActivityIcon, VideoIcon,
 } from 'lucide-react'
-import FlagStudentButton from '@/components/admin/FlagStudentButton'
 
 export const metadata = { title: 'Surveillance vidéo' }
 
@@ -120,10 +119,7 @@ export default async function VideoMonitoringPage() {
                       <span className="text-xs text-yellow-400">{s.tab_hidden_count} tab</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    <SeverityBadge total={s.total} />
-                    <FlagStudentButton id={s.user_id} isFlagged={s.is_flagged ?? false} />
-                  </div>
+                  <SeverityBadge total={s.total} />
                 </div>
               ))}
             </div>

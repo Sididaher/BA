@@ -2,8 +2,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { upsertLesson, deleteLesson } from '@/actions/lessons'
-import { classifyVideoUrl, isPrivateStorageUrl } from '@/lib/utils'
-import { AlertTriangleIcon } from 'lucide-react'
+import { classifyVideoUrl } from '@/lib/utils'
 import type { Lesson, Course } from '@/types'
 
 interface Props {
@@ -16,35 +15,24 @@ export default function AdminLessonForm({ lesson, courses, defaultCourseId }: Pr
   const router = useRouter()
   const [pending,  startTransition] = useTransition()
   const [deleting, startDelete]     = useTransition()
-  const [videoUrlError,    setVideoUrlError]    = useState('')
-  const [videoUrlWarning,  setVideoUrlWarning]  = useState('')
+  const [videoUrlError, setVideoUrlError] = useState('')
 
-  function validateVideoUrl(raw: string): { error: string; warning: string } {
+  function validateVideoUrl(raw: string): string {
     const url = raw.trim()
-    if (!url) return { error: '', warning: '' }
+    if (!url) return ''
     const type = classifyVideoUrl(url)
     if (type === 'invalid') {
-      return {
-        error: 'URL non prise en charge. Utilisez votre stockage Supabase, YouTube, Vimeo ou un fichier .mp4/.webm direct.',
-        warning: '',
-      }
+      return 'URL non prise en charge. Utilisez un lien YouTube, Vimeo, ou une URL directe vers un fichier vidéo (.mp4, .webm…).'
     }
-    if ((type === 'youtube' || type === 'vimeo') && !isPrivateStorageUrl(url)) {
-      return {
-        error: '',
-        warning: 'Vidéo publique détectée. YouTube et Vimeo ne peuvent pas être protégés contre le téléchargement. Préférez votre stockage privé pour les leçons payantes.',
-      }
-    }
-    return { error: '', warning: '' }
+    return ''
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const { error, warning } = validateVideoUrl(fd.get('video_url') as string ?? '')
-    setVideoUrlError(error)
-    setVideoUrlWarning(warning)
-    if (error) return
+    const fd  = new FormData(e.currentTarget)
+    const err = validateVideoUrl(fd.get('video_url') as string ?? '')
+    if (err) { setVideoUrlError(err); return }
+    setVideoUrlError('')
     startTransition(async () => {
       await upsertLesson(fd, lesson?.id)
       router.push('/admin/lessons')
@@ -89,45 +77,22 @@ export default function AdminLessonForm({ lesson, courses, defaultCourseId }: Pr
       </div>
 
       <div>
-        <label className={label}>URL Vidéo (stockage privé recommandé)</label>
+        <label className={label}>URL Vidéo</label>
         <input
           name="video_url"
           defaultValue={lesson?.video_url ?? ''}
-          placeholder="https://…supabase.co/storage/…/video.mp4"
+          placeholder="YouTube, Vimeo, ou lien direct .mp4/.webm"
           className={field + (videoUrlError ? ' border-red-500 focus:border-red-500 focus:ring-red-500' : '')}
-          onChange={e => {
-            const { error, warning } = validateVideoUrl(e.target.value)
-            setVideoUrlError(error)
-            setVideoUrlWarning(warning)
-          }}
+          onChange={() => videoUrlError && setVideoUrlError('')}
         />
-        {videoUrlError && (
+        {videoUrlError ? (
           <p className="mt-1.5 text-xs text-red-400">{videoUrlError}</p>
-        )}
-        {videoUrlWarning && !videoUrlError && (
-          <p className="mt-1.5 text-xs text-yellow-400 flex items-start gap-1.5">
-            <AlertTriangleIcon size={12} className="mt-0.5 shrink-0" />
-            {videoUrlWarning}
-          </p>
-        )}
-        {!videoUrlError && !videoUrlWarning && (
+        ) : (
           <p className="mt-1.5 text-xs text-slate-500">
-            Préférez votre stockage Supabase privé. YouTube/Vimeo sont acceptés mais ne peuvent pas être protégés.
+            Formats acceptés : YouTube (youtube.com/watch?v=… ou youtu.be/…), Vimeo,
+            Supabase Storage, ou lien direct vers un fichier .mp4 / .webm
           </p>
         )}
-      </div>
-
-      <div>
-        <label className={label}>URL HLS (.m3u8) — optionnel, futur streaming segmenté</label>
-        <input
-          name="hls_url"
-          defaultValue={lesson?.hls_url ?? ''}
-          placeholder="https://…supabase.co/storage/…/playlist.m3u8"
-          className={field}
-        />
-        <p className="mt-1.5 text-xs text-slate-500">
-          Laissez vide si vous n&apos;utilisez pas HLS. Prend le dessus sur l&apos;URL vidéo si renseigné.
-        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -2,8 +2,6 @@ import { getAllStudents } from '@/actions/students'
 import { requireAdmin } from '@/lib/auth/get-session'
 import { timeAgo, formatPhone } from '@/lib/utils'
 import ToggleStudentButton from '@/components/admin/ToggleStudentButton'
-import SubscriptionButton from '@/components/admin/SubscriptionButton'
-import FlagStudentButton from '@/components/admin/FlagStudentButton'
 
 export default async function AdminStudentsPage() {
   await requireAdmin()
@@ -27,7 +25,6 @@ export default async function AdminStudentsPage() {
                 <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Téléphone</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden lg:table-cell">Inscrit</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Statut</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Abonnement</th>
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
@@ -36,7 +33,7 @@ export default async function AdminStudentsPage() {
                 <tr key={student.id} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${student.is_flagged ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'}`}>
+                      <div className="w-9 h-9 bg-primary/20 rounded-full flex items-center justify-center text-xs font-bold text-primary shrink-0">
                         {(student.full_name ?? student.phone ?? '?')[0].toUpperCase()}
                       </div>
                       <div>
@@ -52,18 +49,8 @@ export default async function AdminStudentsPage() {
                       {student.is_active ? 'Actif' : 'Inactif'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 hidden md:table-cell">
-                    <SubscriptionButton
-                      id={student.id}
-                      subscriptionStatus={student.subscription_status}
-                      subscriptionExpiresAt={student.subscription_expires_at}
-                    />
-                  </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <ToggleStudentButton id={student.id} isActive={student.is_active} />
-                      <FlagStudentButton id={student.id} isFlagged={student.is_flagged} />
-                    </div>
+                    <ToggleStudentButton id={student.id} isActive={student.is_active} />
                   </td>
                 </tr>
               ))}

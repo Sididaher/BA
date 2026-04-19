@@ -1,5 +1,4 @@
 export type Role = 'student' | 'admin'
-export type SubscriptionStatus = 'none' | 'active' | 'expired' | 'suspended'
 
 export interface Profile {
   id: string
@@ -8,10 +7,6 @@ export interface Profile {
   avatar_url: string | null
   role: Role
   is_active: boolean
-  subscription_status: SubscriptionStatus
-  subscription_expires_at: string | null
-  is_flagged: boolean
-  flag_reason: string | null
   created_at: string
 }
 
@@ -43,7 +38,6 @@ export interface Lesson {
   order_index: number
   is_downloadable: boolean
   is_protected: boolean
-  hls_url: string | null
   created_at: string
   course?: Pick<Course, 'id' | 'title' | 'slug'>
 }

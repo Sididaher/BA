@@ -39,17 +39,7 @@ export function getInitials(name: string | null): string {
 
 /* ─── Video URL helpers ───────────────────────────────────────────────────── */
 
-export type VideoUrlType = 'youtube' | 'vimeo' | 'direct' | 'hls' | 'invalid'
-
-/** Domains explicitly blocked — no paid content should ever live here */
-const BLOCKED_HOSTS = new Set([
-  'drive.google.com',
-  'docs.google.com',
-  'dropbox.com',
-  'www.dropbox.com',
-  'wetransfer.com',
-  'mega.nz',
-])
+export type VideoUrlType = 'youtube' | 'vimeo' | 'direct' | 'invalid'
 
 export function classifyVideoUrl(url: string): VideoUrlType {
   const s = url?.trim()
@@ -57,8 +47,6 @@ export function classifyVideoUrl(url: string): VideoUrlType {
   try {
     const u = new URL(s)
     if (!['http:', 'https:'].includes(u.protocol)) return 'invalid'
-
-    if (BLOCKED_HOSTS.has(u.hostname)) return 'invalid'
 
     if (['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(u.hostname)) {
       if (u.pathname === '/watch' && u.searchParams.has('v')) return 'youtube'
@@ -72,25 +60,11 @@ export function classifyVideoUrl(url: string): VideoUrlType {
     if (u.pathname.includes('/storage/v1/object/')) return 'direct'
 
     const ext = u.pathname.split('.').pop()?.toLowerCase() ?? ''
-    if (ext === 'm3u8' || u.pathname.endsWith('.m3u8')) return 'hls'
     if (['mp4', 'webm', 'ogg', 'mov', 'm4v', 'mkv'].includes(ext)) return 'direct'
 
     return 'invalid'
   } catch {
     return 'invalid'
-  }
-}
-
-/** Returns true when the URL points to this project's private Supabase Storage */
-export function isPrivateStorageUrl(url: string): boolean {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!base || !url) return false
-  try {
-    const baseHost = new URL(base).hostname
-    const u = new URL(url.trim())
-    return u.hostname === baseHost && u.pathname.includes('/storage/v1/object/')
-  } catch {
-    return false
   }
 }
 
