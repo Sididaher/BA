@@ -16,22 +16,25 @@ interface Props {
   progress: number
   completedCount: number
   userProgress: UserProgress[]
+  isActiveStudent: boolean
 }
 
 type Tab = 'lessons' | 'about'
 
 export default function CourseDetailView({
-  course, lessons, isFavorited, progress, completedCount, userProgress,
+  course, lessons, isFavorited, progress, completedCount, userProgress, isActiveStudent,
 }: Props) {
   const [tab, setTab] = useState<Tab>('lessons')
 
-  // Determine sticky CTA target
-  const firstIncomplete = lessons.find(
-    l => !userProgress.find(p => p.lesson_id === l.id && p.completed),
-  )
-  const ctaHref   = progress === 100 ? '#' : firstIncomplete ? `/lessons/${firstIncomplete.id}` : lessons[0] ? `/lessons/${lessons[0].id}` : '#'
-  const ctaLabel  = progress === 100 ? 'Cours terminé' : progress > 0 ? 'Continuer' : 'Commencer le cours'
-  const ctaDone   = progress === 100
+  // Sticky CTA targets the first accessible incomplete lesson
+  const firstAccessibleIncomplete = lessons.find(l => {
+    const done      = userProgress.find(p => p.lesson_id === l.id && p.completed)
+    const canAccess = !l.is_protected || isActiveStudent
+    return !done && canAccess
+  })
+  const ctaHref  = progress === 100 ? '#' : firstAccessibleIncomplete ? `/lessons/${firstAccessibleIncomplete.id}` : lessons[0] ? `/lessons/${lessons[0].id}` : '#'
+  const ctaLabel = progress === 100 ? 'Cours terminé' : progress > 0 ? 'Continuer' : 'Commencer le cours'
+  const ctaDone  = progress === 100
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -141,13 +144,16 @@ export default function CourseDetailView({
               <p className="text-center text-muted text-sm py-8">Aucune leçon disponible.</p>
             ) : (
               lessons.map((lesson, i) => {
-                const done = userProgress.find(p => p.lesson_id === lesson.id && p.completed)
+                const done      = userProgress.find(p => p.lesson_id === lesson.id && p.completed)
+                // canAccess: protected lessons require an active (paid) account
+                const canAccess = !lesson.is_protected || isActiveStudent
                 return (
                   <LessonListItem
                     key={lesson.id}
                     lesson={lesson}
                     index={i + 1}
                     completed={!!done}
+                    canAccess={canAccess}
                   />
                 )
               })
