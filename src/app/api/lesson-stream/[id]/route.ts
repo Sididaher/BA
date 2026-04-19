@@ -48,6 +48,9 @@ export async function GET(
     return NextResponse.json({ error: 'Compte inactif' }, { status: 403 })
   }
 
+  // ── 1b. Log stream access (fire-and-forget — never blocks the response) ──
+  void logStreamAccess(id, profile.id, profile.role, request)
+
   // ── 2. Fetch lesson ───────────────────────────────────────────────────────
   const svc = getServiceClient()
   if (!svc) {
@@ -100,5 +103,34 @@ function buildRedirect(url: string): NextResponse {
   const res = NextResponse.redirect(url, { status: 302 })
   res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
   res.headers.set('Pragma', 'no-cache')
+  res.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  res.headers.set('Content-Security-Policy', "frame-ancestors 'self'")
+  res.headers.set('Cross-Origin-Resource-Policy', 'same-origin')
+  res.headers.set('X-Content-Type-Options', 'nosniff')
   return res
+}
+
+async function logStreamAccess(
+  lessonId: string,
+  userId:   string,
+  role:     string,
+  request:  NextRequest,
+) {
+  try {
+    const svc = getServiceClient()
+    if (!svc) return
+    await svc.from('video_events').insert({
+      user_id:    userId,
+      lesson_id:  lessonId,
+      event_type: 'stream_access',
+      metadata: {
+        role,
+        ip:      request.headers.get('x-forwarded-for') ?? 'unknown',
+        ua:      (request.headers.get('user-agent') ?? '').slice(0, 200),
+        referer: request.headers.get('referer') ?? '',
+      },
+    })
+  } catch {
+    // Never fail the stream over a logging error
+  }
 }

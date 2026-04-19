@@ -39,6 +39,19 @@ export default async function LessonPage({
   const streamUrl  = `/api/lesson-stream/${lesson.id}`
   const hasVideo   = !!lesson.video_url
 
+  // Watermark: name · masked phone · access date+time
+  // Built server-side so it reflects the exact moment of access.
+  const accessTime  = new Date()
+  const maskedPhone = profile.phone
+    ? `+222••••${profile.phone.slice(-4)}`
+    : ''
+  const watermarkText = [
+    profile.full_name ?? 'Étudiant',
+    maskedPhone,
+    accessTime.toLocaleDateString('fr-FR'),
+    accessTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+  ].filter(Boolean).join(' · ')
+
   return (
     <div className="min-h-screen bg-bg">
       <div className="max-w-md mx-auto">
@@ -67,7 +80,7 @@ export default async function LessonPage({
               rawVideoUrl={lesson.video_url!}
               lessonId={lesson.id}
               isProtected={lesson.is_protected}
-              watermarkText={profile.phone ?? undefined}
+              watermarkText={watermarkText}
             />
           ) : (
             <div className="aspect-video bg-gradient-to-br from-primary-light to-blue-100 rounded-2xl flex flex-col items-center justify-center gap-2">
