@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboardIcon, UsersIcon, BookOpenIcon, VideoIcon,
-  BellIcon, BarChart2Icon, LogOutIcon
+  BellIcon, BarChart2Icon, LogOutIcon, ShieldAlertIcon,
 } from 'lucide-react'
 
 const NAV = [
@@ -14,6 +14,7 @@ const NAV = [
   { href: '/admin/lessons', label: 'Leçons', Icon: VideoIcon },
   { href: '/admin/notifications', label: 'Notifications', Icon: BellIcon },
   { href: '/admin/analytics', label: 'Analytiques', Icon: BarChart2Icon },
+  { href: '/admin/video-monitoring', label: 'Surveillance', Icon: ShieldAlertIcon },
 ]
 
 export default function AdminSidebar() {
