@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getSessionProfile } from '@/lib/auth/session'
 
+export const runtime = 'nodejs'
+
 const SIGNED_URL_TTL = 3600 // 1 hour
 
 function parseStorageUrl(url: string): { bucket: string; path: string } | null {

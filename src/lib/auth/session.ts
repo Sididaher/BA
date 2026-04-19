@@ -46,8 +46,8 @@ export async function getSessionProfile(): Promise<Profile | null> {
 
   if (!session?.user_id) {
     // Cookie exists but session is not in the DB or is expired.
-    // Clear it so middleware stops treating this request as authenticated.
-    cookieStore.delete(SESSION_COOKIE)
+    // Cannot delete cookies from Server Components in Next.js 15+.
+    // The middleware will redirect unauthenticated requests; logout clears it.
     return null
   }
 
@@ -58,7 +58,6 @@ export async function getSessionProfile(): Promise<Profile | null> {
     .single()
 
   if (!profile) {
-    cookieStore.delete(SESSION_COOKIE)
     return null
   }
 

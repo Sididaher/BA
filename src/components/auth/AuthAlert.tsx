@@ -44,6 +44,10 @@ export function friendlyError(raw: string | undefined | null): string {
     return 'Problème de configuration du serveur. Contacte le support.'
   if (r.includes('network') || r.includes('fetch') || r.includes('réseau'))
     return 'Problème de connexion réseau. Vérifie internet et réessaie.'
+  if (r.includes('invalid_or_expired') || r.includes('expired_token'))
+    return 'Session expirée ou invalide. Réessaie de te connecter.'
+  if (r.includes('non_json') || r.includes('invalid_request'))
+    return 'Erreur de communication avec le serveur. Réessaie.'
   if (r.includes('session') || r.includes('connexion'))
     return 'Erreur lors de la connexion. Réessaie.'
   if (r.includes('db_') || r.includes('database') || r.includes('interne'))

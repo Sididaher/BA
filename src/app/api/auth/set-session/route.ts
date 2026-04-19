@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { hashToken, SESSION_COOKIE, SESSION_DAYS } from '@/lib/auth/session'
 
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('set-session: missing env vars')
+    return NextResponse.json({ success: false, error: 'missing_env_vars' }, { status: 500 })
+  }
   try {
     let session_token: string | undefined
     try {
