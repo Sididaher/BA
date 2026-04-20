@@ -1,5 +1,5 @@
 import { getCourseBySlug } from '@/actions/courses'
-import { getProfile } from '@/lib/auth/get-session'
+import { requireAuth } from '@/lib/auth/get-session'
 import { getUserProgress } from '@/actions/progress'
 import { getStudentEntitlementIds } from '@/actions/access'
 import { notFound } from 'next/navigation'
@@ -14,8 +14,9 @@ export default async function CourseDetailPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const [course, profile] = await Promise.all([getCourseBySlug(slug), getProfile()])
-  if (!course || !profile) notFound()
+  const { profile } = await requireAuth()
+  const course = await getCourseBySlug(slug)
+  if (!course) notFound()
 
   const [userProgress, entitledIds] = await Promise.all([
     getUserProgress(profile.id),

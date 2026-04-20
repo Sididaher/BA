@@ -3,6 +3,17 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessionProfile } from '@/lib/auth/session'
 import { revalidatePath } from 'next/cache'
 
+/**
+ * Invalidates all pages whose rendered output depends on a student's entitlements.
+ * Called after every grant/revoke so the Next.js Full Route Cache never serves stale data.
+ * (Lesson pages also set `dynamic = 'force-dynamic'`, but course pages don't, so
+ *  revalidation is needed there to refresh the lock icons.)
+ */
+function revalidateAccessCache(studentId: string) {
+  revalidatePath('/courses', 'layout')   // refreshes all /courses/[slug] pages
+  revalidatePath(`/admin/students/${studentId}/access`)
+}
+
 /** Returns the set of lesson IDs the student is entitled to access. */
 export async function getStudentEntitlementIds(studentId: string): Promise<Set<string>> {
   const supabase = await createClient()
@@ -36,7 +47,7 @@ export async function grantLessonAccess(studentId: string, lessonId: string) {
       { onConflict: 'student_id,lesson_id' },
     )
 
-  revalidatePath(`/admin/students/${studentId}/access`)
+  revalidateAccessCache(studentId)
   return { error: error?.message ?? null }
 }
 
@@ -52,7 +63,7 @@ export async function revokeLessonAccess(studentId: string, lessonId: string) {
     .eq('student_id', studentId)
     .eq('lesson_id', lessonId)
 
-  revalidatePath(`/admin/students/${studentId}/access`)
+  revalidateAccessCache(studentId)
   return { error: error?.message ?? null }
 }
 

@@ -1,5 +1,5 @@
 import { getLessonById } from '@/actions/lessons'
-import { getProfile } from '@/lib/auth/get-session'
+import { requireAuth } from '@/lib/auth/get-session'
 import { getStudentEntitlementIds } from '@/actions/access'
 import { canAccessLesson } from '@/lib/auth/access'
 import { createClient } from '@/lib/supabase/server'
@@ -13,14 +13,22 @@ import {
   ClockIcon, ShieldIcon, ChevronLeftIcon, BookOpenIcon, LockIcon,
 } from 'lucide-react'
 
+// Never serve a cached version — access rights can change at any time.
+export const dynamic = 'force-dynamic'
+
 export default async function LessonPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [lesson, profile] = await Promise.all([getLessonById(id), getProfile()])
-  if (!lesson || !profile) notFound()
+
+  // requireAuth guarantees: session valid, profile non-null, account active.
+  // If any of these fail it redirects before we reach the access check below.
+  const { profile } = await requireAuth()
+
+  const lesson = await getLessonById(id)
+  if (!lesson) notFound()
 
   // Check lesson entitlement before loading anything else
   const entitledIds = await getStudentEntitlementIds(profile.id)
