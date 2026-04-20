@@ -1,6 +1,5 @@
 import { getLessonById } from '@/actions/lessons'
 import { getProfile } from '@/lib/auth/get-session'
-import { canAccessLesson } from '@/lib/auth/access'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatDuration } from '@/lib/utils'
@@ -9,7 +8,7 @@ import VideoPlayer from '@/components/lessons/VideoPlayer'
 import LessonActions from '@/components/lessons/LessonActions'
 import Badge from '@/components/ui/Badge'
 import {
-  ClockIcon, ShieldIcon, ChevronLeftIcon, BookOpenIcon, LockIcon,
+  ClockIcon, ShieldIcon, ChevronLeftIcon, BookOpenIcon,
 } from 'lucide-react'
 
 export default async function LessonPage({
@@ -21,71 +20,6 @@ export default async function LessonPage({
   const [lesson, profile] = await Promise.all([getLessonById(id), getProfile()])
   if (!lesson || !profile) notFound()
 
-  const canAccess = canAccessLesson(profile, lesson)
-
-  // ── Shared: back button ────────────────────────────────────────────────────
-  const backLink = lesson.course ? `/courses/${lesson.course.slug}` : '/courses'
-
-  const BackButton = (
-    <div className="flex items-center gap-3 px-5 pt-10 pb-2">
-      <Link
-        href={backLink}
-        className="w-9 h-9 rounded-full bg-card border border-border/50 flex items-center justify-center active:scale-90 transition-transform shadow-sm"
-        aria-label="Retour"
-      >
-        <ChevronLeftIcon size={20} className="text-text" />
-      </Link>
-      {lesson.course && (
-        <p className="text-xs font-semibold text-primary truncate flex-1">
-          {lesson.course.title}
-        </p>
-      )}
-    </div>
-  )
-
-  // ── LOCKED: student has no entitlement for this protected lesson ───────────
-  if (!canAccess) {
-    return (
-      <div className="min-h-screen bg-bg">
-        <div className="max-w-md mx-auto">
-          {BackButton}
-
-          {/* Lock screen — no video, no actions, no notes */}
-          <div className="px-5 pt-2">
-            <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3">
-              <div className="w-14 h-14 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
-                <LockIcon size={26} className="text-muted" />
-              </div>
-              <p className="text-sm font-semibold text-text text-center px-6">
-                Contenu protégé
-              </p>
-              <p className="text-xs text-muted text-center px-8">
-                Cette leçon est réservée aux étudiants inscrits.
-                Contactez l&apos;administration pour activer votre accès.
-              </p>
-            </div>
-          </div>
-
-          <div className="px-5 pt-4 space-y-3">
-            <h1 className="text-xl font-bold text-text leading-snug">{lesson.title}</h1>
-            <div className="flex items-center gap-2 flex-wrap">
-              {lesson.duration > 0 && (
-                <span className="flex items-center gap-1.5 text-xs text-muted bg-bg border border-border/60 px-3 py-1.5 rounded-full">
-                  <ClockIcon size={11} className="text-primary" />
-                  {formatDuration(lesson.duration)}
-                </span>
-              )}
-              <Badge variant="yellow">
-                <ShieldIcon size={10} className="mr-1" />Protégé
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── AUTHORIZED: full lesson experience ────────────────────────────────────
   const supabase = await createClient()
   const [{ data: progress }, { data: note }] = await Promise.all([
     supabase
@@ -105,6 +39,10 @@ export default async function LessonPage({
   const streamUrl = `/api/lesson-stream/${lesson.id}`
   const hasVideo  = !!(lesson.video_url || (lesson.video_bucket && lesson.video_path))
 
+  // rawVideoUrl is used by VideoPlayer only to classify the source type
+  // (youtube / vimeo / direct) so it knows whether to render <iframe> or <video>.
+  // For storage-based lessons, we pass a synthetic Supabase Storage path so it
+  // classifies as 'direct' — the actual <video src> is always streamUrl.
   const rawVideoUrl: string = (() => {
     if (lesson.video_bucket && lesson.video_path) {
       return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${lesson.video_bucket}/${lesson.video_path}`
@@ -112,8 +50,12 @@ export default async function LessonPage({
     return lesson.video_url ?? ''
   })()
 
+  // Watermark: name · masked phone · access date+time
+  // Built server-side so it reflects the exact moment of access.
   const accessTime  = new Date()
-  const maskedPhone = profile.phone ? `+222••••${profile.phone.slice(-4)}` : ''
+  const maskedPhone = profile.phone
+    ? `+222••••${profile.phone.slice(-4)}`
+    : ''
   const watermarkText = [
     profile.full_name ?? 'Étudiant',
     maskedPhone,
@@ -125,9 +67,23 @@ export default async function LessonPage({
     <div className="min-h-screen bg-bg">
       <div className="max-w-md mx-auto">
 
-        {BackButton}
+        {/* ── Floating back button ─────────────────────────────── */}
+        <div className="flex items-center gap-3 px-5 pt-10 pb-2">
+          <Link
+            href={lesson.course ? `/courses/${lesson.course.slug}` : '/courses'}
+            className="w-9 h-9 rounded-full bg-card border border-border/50 flex items-center justify-center active:scale-90 transition-transform shadow-sm"
+            aria-label="Retour"
+          >
+            <ChevronLeftIcon size={20} className="text-text" />
+          </Link>
+          {lesson.course && (
+            <p className="text-xs font-semibold text-primary truncate flex-1">
+              {lesson.course.title}
+            </p>
+          )}
+        </div>
 
-        {/* Video player */}
+        {/* ── Video player ─────────────────────────────────────── */}
         <div className="px-5 pt-2">
           {hasVideo ? (
             <VideoPlayer
@@ -145,10 +101,13 @@ export default async function LessonPage({
           )}
         </div>
 
-        {/* Lesson info */}
+        {/* ── Lesson info ──────────────────────────────────────── */}
         <div className="px-5 pt-4 space-y-3">
-          <h1 className="text-xl font-bold text-text leading-snug">{lesson.title}</h1>
+          <h1 className="text-xl font-bold text-text leading-snug">
+            {lesson.title}
+          </h1>
 
+          {/* Meta chips */}
           <div className="flex items-center gap-2 flex-wrap">
             {lesson.duration > 0 && (
               <span className="flex items-center gap-1.5 text-xs text-muted bg-bg border border-border/60 px-3 py-1.5 rounded-full">
@@ -166,12 +125,15 @@ export default async function LessonPage({
             )}
           </div>
 
+          {/* Description */}
           {lesson.description && (
             <p className="text-sm text-muted leading-relaxed">{lesson.description}</p>
           )}
 
+          {/* Divider */}
           <div className="h-px bg-border/50" />
 
+          {/* Actions: mark done + notes + ask teacher */}
           <LessonActions
             lessonId={lesson.id}
             isCompleted={progress?.completed ?? false}

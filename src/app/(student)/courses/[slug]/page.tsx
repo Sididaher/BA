@@ -6,8 +6,6 @@ import PageHeader from '@/components/layout/PageHeader'
 import CourseDetailView from '@/components/courses/CourseDetailView'
 import { createClient } from '@/lib/supabase/server'
 import type { Lesson } from '@/types'
-// profile is guaranteed active by the student layout; pass it down for access control
-
 
 export default async function CourseDetailPage({
   params,
@@ -47,7 +45,6 @@ export default async function CourseDetailPage({
         progress={progress}
         completedCount={completedCount}
         userProgress={userProgress}
-        isActiveStudent={profile.is_active}
       />
     </div>
   )

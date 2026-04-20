@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getSessionProfile } from '@/lib/auth/session'
-import { canAccessLesson } from '@/lib/auth/access'
 
 export const runtime = 'nodejs'
 
@@ -86,15 +85,7 @@ export async function GET(
     return NextResponse.json({ error: 'Leçon introuvable' }, { status: 404 })
   }
 
-  // ── 4. Entitlement gate — must happen before any URL is generated ─────────
-  if (!canAccessLesson(profile, lesson as { is_protected: boolean })) {
-    return NextResponse.json(
-      { error: 'Cette leçon est réservée aux étudiants inscrits' },
-      { status: 403 },
-    )
-  }
-
-  // ── 5. Check course published (admins bypass) ─────────────────────────────
+  // ── 4. Check course published (admins bypass) ─────────────────────────────
   const courseRaw = (lesson as unknown as {
     course: { id: string; is_published: boolean } | { id: string; is_published: boolean }[]
   }).course
@@ -103,7 +94,7 @@ export async function GET(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
-  // ── 6. Generate signed URL — storage fields take priority ─────────────────
+  // ── 5. Generate signed URL — storage fields take priority ─────────────────
 
   // PATH A: new-style storage (video_bucket + video_path)
   if (hasStorageVideo) {
