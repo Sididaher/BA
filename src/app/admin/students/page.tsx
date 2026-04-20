@@ -2,6 +2,8 @@ import { getAllStudents } from '@/actions/students'
 import { requireAdmin } from '@/lib/auth/get-session'
 import { timeAgo, formatPhone } from '@/lib/utils'
 import ToggleStudentButton from '@/components/admin/ToggleStudentButton'
+import Link from 'next/link'
+import { ShieldIcon } from 'lucide-react'
 
 export default async function AdminStudentsPage() {
   await requireAdmin()
@@ -25,6 +27,7 @@ export default async function AdminStudentsPage() {
                 <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Téléphone</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden lg:table-cell">Inscrit</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Statut</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Accès</th>
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
@@ -48,6 +51,14 @@ export default async function AdminStudentsPage() {
                     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${student.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                       {student.is_active ? 'Actif' : 'Inactif'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Link
+                      href={`/admin/students/${student.id}/access`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                    >
+                      <ShieldIcon size={12} /> Gérer
+                    </Link>
                   </td>
                   <td className="px-6 py-4">
                     <ToggleStudentButton id={student.id} isActive={student.is_active} />

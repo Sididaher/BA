@@ -1,5 +1,7 @@
 import { getLessonById } from '@/actions/lessons'
 import { getProfile } from '@/lib/auth/get-session'
+import { getStudentEntitlementIds } from '@/actions/access'
+import { canAccessLesson } from '@/lib/auth/access'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatDuration } from '@/lib/utils'
@@ -8,7 +10,7 @@ import VideoPlayer from '@/components/lessons/VideoPlayer'
 import LessonActions from '@/components/lessons/LessonActions'
 import Badge from '@/components/ui/Badge'
 import {
-  ClockIcon, ShieldIcon, ChevronLeftIcon, BookOpenIcon,
+  ClockIcon, ShieldIcon, ChevronLeftIcon, BookOpenIcon, LockIcon,
 } from 'lucide-react'
 
 export default async function LessonPage({
@@ -19,6 +21,47 @@ export default async function LessonPage({
   const { id } = await params
   const [lesson, profile] = await Promise.all([getLessonById(id), getProfile()])
   if (!lesson || !profile) notFound()
+
+  // Check lesson entitlement before loading anything else
+  const entitledIds = await getStudentEntitlementIds(profile.id)
+  const accessible  = canAccessLesson(profile, lesson, entitledIds)
+
+  // Locked: show a minimal gate page — title visible, content blocked
+  if (!accessible) {
+    return (
+      <div className="min-h-screen bg-bg">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center gap-3 px-5 pt-10 pb-2">
+            <Link
+              href={lesson.course ? `/courses/${lesson.course.slug}` : '/courses'}
+              className="w-9 h-9 rounded-full bg-card border border-border/50 flex items-center justify-center active:scale-90 transition-transform shadow-sm"
+              aria-label="Retour"
+            >
+              <ChevronLeftIcon size={20} className="text-text" />
+            </Link>
+            {lesson.course && (
+              <p className="text-xs font-semibold text-primary truncate flex-1">
+                {lesson.course.title}
+              </p>
+            )}
+          </div>
+          <div className="px-5 pt-4 space-y-4">
+            <h1 className="text-xl font-bold text-text leading-snug">{lesson.title}</h1>
+            <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm">
+                <LockIcon size={24} className="text-muted" />
+              </div>
+              <p className="text-sm font-semibold text-muted">Leçon verrouillée</p>
+              <p className="text-xs text-muted/70 text-center px-8">
+                Tu n&apos;as pas encore accès à cette leçon.<br />
+                Contacte ton professeur pour obtenir l&apos;accès.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const supabase = await createClient()
   const [{ data: progress }, { data: note }] = await Promise.all([

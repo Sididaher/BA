@@ -60,6 +60,36 @@ export async function POST(req: NextRequest) {
 
     const role: string = profile?.role ?? 'student'
 
+    // Send a one-time welcome notification to new students.
+    // We check whether any notification already exists for this user so the
+    // message is never duplicated on repeated logins or re-registrations.
+    if (role === 'student') {
+      try {
+        const { count } = await db
+          .from('notifications')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', session.user_id)
+
+        if (count === 0) {
+          const studentName = (
+            await db.from('profiles').select('full_name').eq('id', session.user_id).single()
+          ).data?.full_name ?? 'Étudiant'
+
+          const firstName = studentName.split(' ')[0]
+          await db.from('notifications').insert({
+            user_id: session.user_id,
+            title:   `Bienvenue sur BA, ${firstName} !`,
+            message:
+              `Bonjour ${firstName}, nous sommes ravis de t'accueillir sur BA. ` +
+              `Explore les cours disponibles et commence ton apprentissage dès maintenant. ` +
+              `Bonne continuation !`,
+          })
+        }
+      } catch {
+        // Never fail the session setup over a notification error
+      }
+    }
+
     const response = NextResponse.json({ success: true, role })
     response.cookies.set(SESSION_COOKIE, session_token, {
       httpOnly: true,

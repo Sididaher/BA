@@ -4,8 +4,8 @@ import type { Profile } from '@/types'
 
 export async function requireAuth(): Promise<{ profile: Profile }> {
   const profile = await getSessionProfile()
-  if (!profile)          redirect('/login')
-  if (!profile.is_active) redirect('/login')
+  if (!profile)           redirect('/login')
+  if (!profile.is_active) redirect('/suspended')  // avoids infinite loop with public layout
   return { profile }
 }
 

@@ -39,16 +39,31 @@ export async function updateWatchedSeconds(lessonId: string, seconds: number) {
 
 export async function getDashboardStats(userId: string) {
   const supabase = await createClient()
-  const [progress, notes, favorites] = await Promise.all([
-    supabase.from('user_progress').select('*').eq('user_id', userId),
-    supabase.from('notes').select('id').eq('user_id', userId),
-    supabase.from('favorites').select('id').eq('user_id', userId),
+  const [completed, inProg, notes, favorites] = await Promise.all([
+    supabase
+      .from('user_progress')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('completed', true),
+    supabase
+      .from('user_progress')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('completed', false)
+      .gt('watched_seconds', 0),
+    supabase
+      .from('notes')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    supabase
+      .from('favorites')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
   ])
-  const completedLessons = progress.data?.filter(p => p.completed).length ?? 0
   return {
-    completedLessons,
-    totalNotes:     notes.data?.length ?? 0,
-    totalFavorites: favorites.data?.length ?? 0,
-    inProgress:     progress.data?.filter(p => !p.completed && p.watched_seconds > 0).length ?? 0,
+    completedLessons: completed.count ?? 0,
+    inProgress:       inProg.count   ?? 0,
+    totalNotes:       notes.count    ?? 0,
+    totalFavorites:   favorites.count ?? 0,
   }
 }

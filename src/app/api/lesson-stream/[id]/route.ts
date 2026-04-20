@@ -85,7 +85,20 @@ export async function GET(
     return NextResponse.json({ error: 'Leçon introuvable' }, { status: 404 })
   }
 
-  // ── 4. Check course published (admins bypass) ─────────────────────────────
+  // ── 4. Check lesson entitlement (admins bypass) ──────────────────────────
+  if (lesson.is_protected && profile.role !== 'admin') {
+    const { data: entitlement } = await svc
+      .from('student_lesson_access')
+      .select('id')
+      .eq('student_id', profile.id)
+      .eq('lesson_id', id)
+      .maybeSingle()
+    if (!entitlement) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
+  }
+
+  // ── 5. Check course published (admins bypass) ────────────────────────────
   const courseRaw = (lesson as unknown as {
     course: { id: string; is_published: boolean } | { id: string; is_published: boolean }[]
   }).course
@@ -94,7 +107,7 @@ export async function GET(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
-  // ── 5. Generate signed URL — storage fields take priority ─────────────────
+  // ── 6. Generate signed URL — storage fields take priority ─────────────────
 
   // PATH A: new-style storage (video_bucket + video_path)
   if (hasStorageVideo) {

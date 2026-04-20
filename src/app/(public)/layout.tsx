@@ -9,7 +9,9 @@ import { getSessionProfile } from '@/lib/auth/session'
  */
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const profile = await getSessionProfile()
-  if (profile) {
+  // Only redirect away from auth pages when the account is genuinely active.
+  // An inactive account would otherwise loop: requireAuth → /login → layout → /dashboard → requireAuth → …
+  if (profile?.is_active) {
     redirect(profile.role === 'admin' ? '/admin' : '/dashboard')
   }
   return <>{children}</>

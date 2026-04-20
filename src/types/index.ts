@@ -109,3 +109,11 @@ export interface DashboardStats {
   totalNotes: number
   totalFavorites: number
 }
+
+export interface StudentLessonAccess {
+  id: string
+  student_id: string
+  lesson_id: string
+  granted_at: string
+  granted_by: string | null
+}

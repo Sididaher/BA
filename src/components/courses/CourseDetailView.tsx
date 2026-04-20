@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge'
 import ProgressBar from '@/components/ui/ProgressBar'
 import LessonListItem from '@/components/lessons/LessonListItem'
 import FavoriteButton from '@/components/courses/FavoriteButton'
+import { canAccessLesson } from '@/lib/auth/access'
 import type { Course, Lesson, UserProgress } from '@/types'
 
 interface Props {
@@ -16,13 +17,17 @@ interface Props {
   progress: number
   completedCount: number
   userProgress: UserProgress[]
+  profileRole: string
+  entitledLessonIds: string[]
 }
 
 type Tab = 'lessons' | 'about'
 
 export default function CourseDetailView({
   course, lessons, isFavorited, progress, completedCount, userProgress,
+  profileRole, entitledLessonIds,
 }: Props) {
+  const entitledSet = new Set(entitledLessonIds)
   const [tab, setTab] = useState<Tab>('lessons')
 
   // Determine sticky CTA target
@@ -141,13 +146,19 @@ export default function CourseDetailView({
               <p className="text-center text-muted text-sm py-8">Aucune leçon disponible.</p>
             ) : (
               lessons.map((lesson, i) => {
-                const done = userProgress.find(p => p.lesson_id === lesson.id && p.completed)
+                const done      = userProgress.find(p => p.lesson_id === lesson.id && p.completed)
+                const canAccess = canAccessLesson(
+                  { role: profileRole as 'student' | 'admin' },
+                  lesson,
+                  entitledSet,
+                )
                 return (
                   <LessonListItem
                     key={lesson.id}
                     lesson={lesson}
                     index={i + 1}
                     completed={!!done}
+                    canAccess={canAccess}
                   />
                 )
               })

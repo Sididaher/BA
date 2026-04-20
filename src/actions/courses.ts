@@ -3,13 +3,17 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { slugify } from '@/lib/utils'
 
-export async function getCourses() {
+export async function getCourses(opts?: { category?: string; q?: string }) {
   const supabase = await createClient()
-  const { data } = await supabase
+  let query = supabase
     .from('courses')
     .select('*, lessons(count)')
     .eq('is_published', true)
-    .order('created_at', { ascending: false })
+
+  if (opts?.category) query = query.eq('category', opts.category)
+  if (opts?.q)        query = query.ilike('title', `%${opts.q}%`)
+
+  const { data } = await query.order('created_at', { ascending: false })
   return data ?? []
 }
 

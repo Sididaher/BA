@@ -1,6 +1,7 @@
 import { getCourseBySlug } from '@/actions/courses'
 import { getProfile } from '@/lib/auth/get-session'
 import { getUserProgress } from '@/actions/progress'
+import { getStudentEntitlementIds } from '@/actions/access'
 import { notFound } from 'next/navigation'
 import PageHeader from '@/components/layout/PageHeader'
 import CourseDetailView from '@/components/courses/CourseDetailView'
@@ -16,8 +17,11 @@ export default async function CourseDetailPage({
   const [course, profile] = await Promise.all([getCourseBySlug(slug), getProfile()])
   if (!course || !profile) notFound()
 
-  const userProgress = await getUserProgress(profile.id)
-  const lessons      = (course.lessons ?? []) as Lesson[]
+  const [userProgress, entitledIds] = await Promise.all([
+    getUserProgress(profile.id),
+    getStudentEntitlementIds(profile.id),
+  ])
+  const lessons = (course.lessons ?? []) as Lesson[]
   const completedCount = lessons.filter(
     l => userProgress.find(p => p.lesson_id === l.id && p.completed),
   ).length
@@ -45,6 +49,8 @@ export default async function CourseDetailPage({
         progress={progress}
         completedCount={completedCount}
         userProgress={userProgress}
+        profileRole={profile.role}
+        entitledLessonIds={[...entitledIds]}
       />
     </div>
   )

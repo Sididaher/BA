@@ -10,10 +10,11 @@ interface LessonListItemProps {
   lesson: Lesson
   index: number
   completed?: boolean
+  canAccess?: boolean
 }
 
-export default function LessonListItem({ lesson, index, completed }: LessonListItemProps) {
-  const isLocked = lesson.is_protected && !completed
+export default function LessonListItem({ lesson, index, completed, canAccess = true }: LessonListItemProps) {
+  const isLocked = !canAccess
 
   return (
     <Link href={`/lessons/${lesson.id}`}>

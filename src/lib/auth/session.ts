@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 import type { Profile } from '@/types'
 
 export const SESSION_COOKIE = 'bac_session'
@@ -28,8 +29,11 @@ function serviceClient() {
 /**
  * Reads the session cookie, validates against auth_sessions, returns the profile.
  * Returns null if no session or if the session is expired/revoked.
+ *
+ * Wrapped in React cache() so multiple callers within the same request (layout +
+ * page + server actions) share one DB round-trip instead of each paying 2 queries.
  */
-export async function getSessionProfile(): Promise<Profile | null> {
+export const getSessionProfile = cache(async (): Promise<Profile | null> => {
   const cookieStore = await cookies()
   const token = cookieStore.get(SESSION_COOKIE)?.value
   if (!token) return null
@@ -62,7 +66,7 @@ export async function getSessionProfile(): Promise<Profile | null> {
   }
 
   return profile as Profile
-}
+})
 
 /**
  * Deletes the session from the DB and clears the cookie.

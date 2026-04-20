@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { SESSION_COOKIE } from '@/lib/auth/session'
 
-const PUBLIC_PATHS = new Set(['/', '/login', '/verify-otp', '/register'])
+const PUBLIC_PATHS = new Set(['/', '/login', '/verify-otp', '/register', '/suspended'])
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

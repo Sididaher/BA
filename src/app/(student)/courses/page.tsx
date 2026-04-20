@@ -14,13 +14,7 @@ export default async function CoursesPage({
   searchParams: Promise<{ category?: string; q?: string }>
 }) {
   const { category, q } = await searchParams
-  const allCourses = await getCourses()
-
-  const filtered = allCourses.filter(c => {
-    const matchCat = !category || c.category === category
-    const matchQ   = !q || c.title.toLowerCase().includes(q.toLowerCase())
-    return matchCat && matchQ
-  })
+  const filtered = await getCourses({ category, q })
 
   return (
     <div className="min-h-screen bg-bg">
