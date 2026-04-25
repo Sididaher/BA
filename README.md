@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BacEnglish
 
-## Getting Started
+Projet d'apprentissage de l'anglais pour le Bac, structuré avec un Backend Supabase et un Frontend Next.js.
 
-First, run the development server:
+## Structure du Projet
 
+Le projet est divisé en deux répertoires principaux :
+
+- **`/backend`** : Contient toute la configuration Supabase.
+  - `supabase/schema.sql` : Schéma de base de données d'origine.
+  - `supabase/migrations/` : Scripts SQL de migration (à exécuter dans l'ordre).
+  - `supabase/functions/` : Edge Functions (Auth, OTP).
+- **`/frontend`** : Contient l'application Next.js.
+  - `src/` : Code source de l'application (Actions, Components, App).
+  - `public/` : Assets statiques.
+
+## Installation et Développement
+
+### 1. Frontend
+Naviguez vers le dossier frontend pour lancer l'application :
 ```bash
+cd frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Backend (Supabase)
+Toutes les commandes Supabase CLI doivent être exécutées depuis la racine ou en spécifiant le chemin :
+```bash
+# Exemple pour lancer les fonctions localement
+supabase functions serve --project-ref your-project-id
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Migrations SQL (Ordre d'exécution)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Pour mettre à jour votre base de données Supabase, exécutez les fichiers suivants dans l'**Editeur SQL** de Supabase, dans cet ordre :
 
-## Learn More
+1. `backend/supabase/migrations/20260425000000_refactor_profiles.sql` (Refonte des profils)
+2. `backend/supabase/migrations/20260425010000_rpc_layer.sql` (Couche API RPC)
+3. `backend/supabase/migrations/20260425020000_rls_cleanup.sql` (Sécurité RLS et Performance)
 
-To learn more about Next.js, take a look at the following resources:
+## Sécurité
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le projet utilise un système d'authentification personnalisé. Les politiques RLS sont configurées pour restreindre l'accès direct via le client Supabase et privilégier les appels via les **Server Actions** et les **fonctions RPC** (utilisant la clé `service_role`).
