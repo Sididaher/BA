@@ -1,5 +1,11 @@
 import { getLessonById } from '@/actions/lessons'
+<<<<<<< HEAD:frontend/src/app/(student)/lessons/[id]/page.tsx
 import { getProfile } from '@/lib/auth/get-session'
+=======
+import { requireAuth } from '@/lib/auth/get-session'
+import { getStudentEntitlementIds } from '@/actions/access'
+import { canAccessLesson } from '@/lib/auth/access'
+>>>>>>> 0a916f91472c436e5bc8bac9be3ef1e62150a5f6:src/app/(student)/lessons/[id]/page.tsx
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { formatDuration } from '@/lib/utils'
@@ -11,14 +17,22 @@ import {
   ClockIcon, ShieldIcon, ChevronLeftIcon, BookOpenIcon,
 } from 'lucide-react'
 
+// Never serve a cached version — access rights can change at any time.
+export const dynamic = 'force-dynamic'
+
 export default async function LessonPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [lesson, profile] = await Promise.all([getLessonById(id), getProfile()])
-  if (!lesson || !profile) notFound()
+
+  // requireAuth guarantees: session valid, profile non-null, account active.
+  // If any of these fail it redirects before we reach the access check below.
+  const { profile } = await requireAuth()
+
+  const lesson = await getLessonById(id)
+  if (!lesson) notFound()
 
   const supabase = await createClient()
   const { data: note } = await supabase
