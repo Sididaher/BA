@@ -36,6 +36,7 @@ export async function grantLessonAccess(studentId: string, lessonId: string) {
   }
 
   revalidatePath(`/admin/students/${studentId}/access`)
+  revalidatePath('/courses', 'layout')
 }
 
 export async function revokeLessonAccess(studentId: string, lessonId: string) {
@@ -52,4 +53,5 @@ export async function revokeLessonAccess(studentId: string, lessonId: string) {
   }
 
   revalidatePath(`/admin/students/${studentId}/access`)
+  revalidatePath('/courses', 'layout')
 }
